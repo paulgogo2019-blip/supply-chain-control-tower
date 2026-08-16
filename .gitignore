@@ -1,0 +1,15 @@
+# Security - Never upload AWS Keys or Secrets
+.streamlit/secrets.toml
+
+# Local Data Exports & Generated Files
+*.csv
+*.png
+*.json
+*.xlsx
+*.pdf
+
+# Python & System Caches
+__pycache__/
+*.pyc
+.DS_Store
+.env
