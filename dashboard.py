@@ -98,19 +98,19 @@ if show_sh:
 # ── KPI Row ───────────────────────────────────────
 st.subheader("Portfolio KPIs")
 
-# Row 1: Stock & Inventory Counts
+# Row 1: Stock & Inventory Counts (Updated to use 'filtered')
 k1, k2, k3, k4 = st.columns(4)
-k1.metric("Total SKUs", len(results_df))
-k2.metric("Stockouts", int(len(results_df[results_df['Action_Required'] == 'URGENT: STOCKOUT'])))
-k3.metric("Order Now", int(len(results_df[results_df['Action_Required'] == 'ORDER NOW'])))
-k4.metric("Backorder Qty", f"{int(results_df['Backorder_Qty'].sum()):,}")
+k1.metric("Total SKUs", len(filtered))
+k2.metric("Stockouts", int(len(filtered[filtered['Action_Required'] == 'URGENT: STOCKOUT'])))
+k3.metric("Order Now", int(len(filtered[filtered['Action_Required'] == 'ORDER NOW'])))
+k4.metric("Backorder Qty", f"{int(filtered['Backorder_Qty'].sum()):,}" if not filtered.empty else "0")
 
-# Row 2: Quantities, Accuracy & Value Metrics
+# Row 2: Quantities, Accuracy & Value Metrics (Updated to use 'filtered')
 k5, k6, k7, k8 = st.columns(4)
-k5.metric("Short Qty", f"{int(results_df['Short_Qty'].sum()):,}")
-k6.metric("Avg MAPE", f"{results_df['MAPE_pct'].mean():.1f}%")
-k7.metric("Total Inv Value", f"${results_df['Inventory_Value'].sum():,.0f}")
-k8.metric("Avg Gross Margin", f"{results_df['Gross_Margin_pct'].mean():.1f}%")
+k5.metric("Short Qty", f"{int(filtered['Short_Qty'].sum()):,}" if not filtered.empty else "0")
+k6.metric("Avg MAPE", f"{filtered['MAPE_pct'].mean():.1f}%" if not filtered.empty else "0.0%")
+k7.metric("Total Inv Value", f"${filtered['Inventory_Value'].sum():,.0f}" if not filtered.empty else "$0")
+k8.metric("Avg Gross Margin", f"{filtered['Gross_Margin_pct'].mean():.1f}%" if not filtered.empty else "0.0%")
 
 st.divider()
 
@@ -131,7 +131,7 @@ with tab1:
     c1, c2 = st.columns(2)
     with c1:
         st.markdown("#### Critical — Act Immediately")
-        crit = results_df[results_df['Action_Required'].isin(['URGENT: STOCKOUT', 'ORDER NOW'])][[
+        crit = filtered[filtered['Action_Required'].isin(['URGENT: STOCKOUT', 'ORDER NOW'])][[
             'SKU', 'Segment', 'Supplier_Name', 'Current_Stock', 'Backorder_Qty', 'ROP', 'Forecast_M1', 'Action_Required', 'MAPE_pct', 'Avg_Lead_Time', 'MOQ'
         ]]
         if len(crit) > 0:
@@ -141,7 +141,7 @@ with tab1:
 
     with c2:
         st.markdown("#### SAP — Backorders & Shortages")
-        sap = results_df[(results_df['Backorder_Qty'] > 0) | (results_df['Short_Qty'] > 0)][[
+        sap = filtered[(filtered['Backorder_Qty'] > 0) | (filtered['Short_Qty'] > 0)][[
             'SKU', 'Segment', 'Current_Stock', 'Backorder_Qty', 'Short_Qty', 'Unavailable_Qty', 'Allocated_Stock', 'Supplier_Name', 'Action_Required'
         ]]
         if len(sap) > 0:
@@ -151,7 +151,7 @@ with tab1:
             st.success("No backorders/shortages")
 
     st.markdown("#### Warnings — Act This Week")
-    warn = results_df[results_df['Action_Required'].isin(['APPROACHING ROP', 'OVERSTOCK: REDUCE ORDERS', 'ALLOCATION SHORTAGE'])][[
+    warn = filtered[filtered['Action_Required'].isin(['APPROACHING ROP', 'OVERSTOCK: REDUCE ORDERS', 'ALLOCATION SHORTAGE'])][[
         'SKU', 'Segment', 'Current_Stock', 'ROP', 'Max_Stock', 'Short_Qty', 'Action_Required', 'Excess_Value'
     ]]
     if len(warn) > 0:
@@ -160,7 +160,7 @@ with tab1:
         st.success("No warnings")
 
     st.markdown("#### Dead Stock")
-    dead = results_df[results_df['Dead_Stock_Flag'] == 'YES'][[
+    dead = filtered[filtered['Dead_Stock_Flag'] == 'YES'][[
         'SKU', 'Segment', 'Current_Stock', 'Unavailable_Qty', 'Backorder_Qty', 'Unit_Cost', 'Inventory_Value', 'Supplier_Name'
     ]]
     if len(dead) > 0:
@@ -173,10 +173,10 @@ with tab1:
 with tab2:
     st.subheader("SAP Inventory Position")
     c1,c2,c3,c4 = st.columns(4)
-    c1.metric("Total Value", f"${filtered['Inventory_Value'].sum():,.0f}")
-    c2.metric("Excess Capital", f"${filtered['Excess_Value'].sum():,.0f}")
-    c3.metric("Avg Days of Supply", f"{filtered['DOS_on_Hand'].mean():.0f}d")
-    c4.metric("Avg Allocation Rate", f"{filtered['Allocation_Rate_pct'].mean():.1f}%")
+    c1.metric("Total Value", f"${filtered['Inventory_Value'].sum():,.0f}" if not filtered.empty else "$0")
+    c2.metric("Excess Capital", f"${filtered['Excess_Value'].sum():,.0f}" if not filtered.empty else "$0")
+    c3.metric("Avg Days of Supply", f"{filtered['DOS_on_Hand'].mean():.0f}d" if not filtered.empty else "0d")
+    c4.metric("Avg Allocation Rate", f"{filtered['Allocation_Rate_pct'].mean():.1f}%" if not filtered.empty else "0.0%")
     cols = [
         'SKU', 'Segment', 'Current_Stock', 'On_Hand_Stock', 'Reserved_Stock', 'Allocated_Stock', 'Backorder_Qty', 'Short_Qty', 'Unavailable_Qty', 'ROP', 'Max_Stock', 'Safety_Stock', 'DOS_on_Hand', 'Inventory_Value', 'Stock_Status', 'Action_Required'
     ]
@@ -188,12 +188,13 @@ with tab2:
 with tab3:
     st.subheader("Demand Forecasts")
     c1,c2,c3 = st.columns(3)
-    c1.metric("Avg MAPE", f"{filtered['MAPE_pct'].mean():.1f}%")
+    c1.metric("Avg MAPE", f"{filtered['MAPE_pct'].mean():.1f}%" if not filtered.empty else "0.0%")
     c2.metric("SKUs MAPE < 15%", len(filtered[filtered['MAPE_pct'] < 15]))
-    c3.metric("Avg Gross Margin", f"{filtered['Gross_Margin_pct'].mean():.1f}%")
+    c3.metric("Avg Gross Margin", f"{filtered['Gross_Margin_pct'].mean():.1f}%" if not filtered.empty else "0.0%")
     st.markdown("#### Model Selection")
     mc = (filtered['Best_Model'].value_counts().reset_index())
-    mc.columns = ['Model', 'SKU_Count']
+    if not mc.empty:
+        mc.columns = ['Model', 'SKU_Count']
     st.dataframe(mc, use_container_width=True)
     st.markdown("#### All Forecasts")
     fc = [
@@ -225,17 +226,22 @@ with tab4:
 with tab5:
     st.subheader("Supplier Scorecards")
     if not suppliers_df.empty:
+        # Filter suppliers list if supplier filter is active
+        sup_filtered = suppliers_df.copy()
+        if sup_filter != 'All':
+            sup_filtered = sup_filtered[sup_filtered['Supplier_Name'] == sup_filter]
+            
         c1,c2,c3,c4 = st.columns(4)
-        c1.metric("Total Suppliers", suppliers_df['Supplier_ID'].nunique())
-        c2.metric("Avg Lead Time", f"{suppliers_df['Lead_Time_Days'].mean():.1f}d")
-        c3.metric("Avg OTD Rate", f"{suppliers_df['OTD_Rate_Pct'].mean():.1f}%")
-        c4.metric("Avg Quality", f"{suppliers_df['Quality_Score'].mean():.2f}/5")
+        c1.metric("Total Suppliers", sup_filtered['Supplier_ID'].nunique())
+        c2.metric("Avg Lead Time", f"{sup_filtered['Lead_Time_Days'].mean():.1f}d" if not sup_filtered.empty else "0d")
+        c3.metric("Avg OTD Rate", f"{sup_filtered['OTD_Rate_Pct'].mean():.1f}%" if not sup_filtered.empty else "0.0%")
+        c4.metric("Avg Quality", f"{sup_filtered['Quality_Score'].mean():.2f}/5" if not sup_filtered.empty else "0/5")
         sc = [
             'SKU', 'Supplier_ID', 'Supplier_Name', 'Lead_Time_Days', 'MOQ', 'Unit_Cost', 'OTD_Rate_Pct', 'Quality_Score', 'Ship_Mode', 'Status', 'Supplier_Score', 'Num_Suppliers'
         ]
-        sc_ok = [c for c in sc if c in suppliers_df.columns]
-        st.dataframe(suppliers_df[sc_ok].sort_values('Supplier_Score', ascending=False), use_container_width=True)
-        ur = suppliers_df[suppliers_df['Status'] == 'Under Review']
+        sc_ok = [c for c in sc if c in sup_filtered.columns]
+        st.dataframe(sup_filtered[sc_ok].sort_values('Supplier_Score', ascending=False), use_container_width=True)
+        ur = sup_filtered[sup_filtered['Status'] == 'Under Review']
         if len(ur) > 0:
             st.warning(f"{ur['Supplier_ID'].nunique()} supplier(s) Under Review — affects {len(ur)} SKUs")
     else:
@@ -244,7 +250,7 @@ with tab5:
 # ── Tab 6: ABC-XYZ ────────────────────────────────
 with tab6:
     st.subheader("ABC-XYZ Inventory Segmentation")
-    if 'Segment' in filtered.columns:
+    if 'Segment' in filtered.columns and not filtered.empty:
         seg_sum = (
             filtered.groupby('Segment').agg(
                 SKU_Count        = ('SKU', 'count'),
@@ -257,20 +263,23 @@ with tab6:
             ).reset_index().sort_values('Segment')
         )
         st.dataframe(seg_sum, use_container_width=True)
-        st.markdown("#### Strategy Recommendations")
-        strategy_map = {
-            'AX': 'Holt-Winters + Tight Safety Stock',
-            'AY': 'Holt-Winters + Higher Safety Stock',
-            'AZ': 'Amazon Forecast + Manual Review',
-            'BX': 'Simple Exponential Smoothing',
-            'BY': 'Exp Smoothing + Safety Stock',
-            'BZ': 'Reorder Point + High Safety Stock',
-            'CX': 'Min/Max Policy',
-            'CY': 'Min/Max with Buffer',
-            'CZ': 'Discontinuation or VMI'
-        }
-        strat_df = pd.DataFrame([
-            {'Segment': k, 'Strategy': v}
-            for k, v in strategy_map.items()
-        ])
-        st.dataframe(strat_df, use_container_width=True)
+    else:
+        st.info("No segment data available for current filter selection.")
+        
+    st.markdown("#### Strategy Recommendations")
+    strategy_map = {
+        'AX': 'Holt-Winters + Tight Safety Stock',
+        'AY': 'Holt-Winters + Higher Safety Stock',
+        'AZ': 'Amazon Forecast + Manual Review',
+        'BX': 'Simple Exponential Smoothing',
+        'BY': 'Exp Smoothing + Safety Stock',
+        'BZ': 'Reorder Point + High Safety Stock',
+        'CX': 'Min/Max Policy',
+        'CY': 'Min/Max with Buffer',
+        'CZ': 'Discontinuation or VMI'
+    }
+    strat_df = pd.DataFrame([
+        {'Segment': k, 'Strategy': v}
+        for k, v in strategy_map.items()
+    ])
+    st.dataframe(strat_df, use_container_width=True)
