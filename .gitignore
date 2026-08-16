@@ -1,15 +1,8 @@
-# Security - Never upload AWS Keys or Secrets
-.streamlit/secrets.toml
-
-# Local Data Exports & Generated Files
+# Exclude confidential documentation and local data files
+New folder/
+SAP INVENTORY AND SHIPMENT/
+SC Alerts.docx
+notepad dashboard.py.txt
+*.docx
+*.parquet
 *.csv
-*.png
-*.json
-*.xlsx
-*.pdf
-
-# Python & System Caches
-__pycache__/
-*.pyc
-.DS_Store
-.env
